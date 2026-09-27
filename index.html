@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Remote Tasks KE</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f7f7f8;
+    color: #111;
+    line-height: 1.5;
+    padding: 16px;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 26px; font-weight: 700; }
+  header p { color: #666; margin-top: 4px; font-size: 15px; }
+
+  .filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .search {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    background: #fff;
+  }
+  .search:focus { border-color: #111; }
+
+  .scopes { display: flex; gap: 8px; overflow-x: auto; }
+  .scopes button {
+    padding: 8px 14px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 10px;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .scopes button.active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+
+  .job {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .job:hover { border-color: #999; }
+  .job-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .job h3 { font-size: 17px; font-weight: 600; }
+  .job .company { color: #666; font-size: 14px; margin-top: 2px; }
+  .badge {
+    font-size: 12px;
+    background: #f0f0f2;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .salary { color: #1a7f37; font-size: 14px; margin-top: 8px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-size: 12px;
+    background: #eaf1ff;
+    color: #1a4fd6;
+    padding: 3px 9px;
+    border-radius: 6px;
+  }
+
+  .empty { color: #888; text-align: center; padding: 40px 0; }
+
+  /* Modal */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .modal-bg.show { display: flex; align-items: flex-start; justify-content: center; }
+  .modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 600px;
+    width: 100%;
+    margin-top: 40px;
+  }
+  .modal h2 { font-size: 22px; margin-bottom: 4px; }
+  .modal .m-company { color: #666; margin-bottom: 16px; }
+  .modal .m-desc { white-space: pre-wrap; margin: 16px 0; }
+  .modal .apply {
+    display: inline-block;
+    background: #111;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    margin-top: 12px;
+  }
+  .close {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+  }
+
+  footer { text-align: center; color: #999; font-size: 13px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Remote Tasks KE</h1>
+    <p>Remote roles that actually accept Kenyan applicants.</p>
+  </header>
+
+  <div class="filters">
+    <input type="text" id="search" class="search" placeholder="Search roles or companies..." />
+    <div class="scopes" id="scopes">
+      <button data-scope="all" class="active">All</button>
+      <button data-scope="kenya">🇰🇪 Kenya</button>
+      <button data-scope="africa">🌍 Africa</button>
+      <button data-scope="global">🌐 Global</button>
+    </div>
+  </div>
+
+  <div id="jobs"></div>
+
+  <footer>Built in Nairobi · Updated weekly</footer>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <button class="close" onclick="closeModal()">×</button>
+    <h2 id="mTitle"></h2>
+    <p class="m-company" id="mCompany"></p>
+    <p class="salary" id="mSalary"></p>
+    <div class="m-desc" id="mDesc"></div>
+    <a class="apply" id="mApply" href="#" target="_blank" rel="noopener">Apply now →</a>
+  </div>
+</div>
+
+<script>
+// 👇 EDIT THIS LIST TO ADD / REMOVE JOBS
+const jobs = [
+  {
+    title: "Frontend Developer",
+    company: "Safari Tech",
+    scope: "kenya",
+    salary: "KES 150,000 - 250,000 / month",
+    tags: ["React", "Remote", "Full-time"],
+    description: "We're looking for a React developer to join our fully remote team. You'll work on customer-facing dashboards and help scale our platform across East Africa.\n\nRequirements:\n- 2+ years React experience\n- Familiar with TypeScript\n- Good written English",
+    apply: "https://example.com/apply"
+  },
+  {
+    title: "Customer Support (Night Shift)",
+    company: "GlobalHelp",
+    scope: "global",
+    salary: "$800 - $1,200 / month",
+    tags: ["Support", "English", "Entry-level"],
+    description: "Remote customer support role for a US-based SaaS. Night shift (Kenya time). Must have reliable internet and a quiet workspace.",
+    apply: "https://example.com/apply2"
+  },
+  {
+    title: "Content Writer",
+    company: "AfriMedia",
+    scope: "africa",
+    salary: "KES 60,000 - 90,000 / month",
+    tags: ["Writing", "Part-time"],
+    description: "Write engaging articles about African tech, culture, and business. Portfolio required.",
+    apply: "https://example.com/apply3"
+  }
+];
+
+const scopeLabel = { kenya: "🇰🇪 Kenya", africa: "🌍 Africa", global: "🌐 Global" };
+
+let currentScope = "all";
+let currentQuery = "";
+
+function render() {
+  const wrap = document.getElementById("jobs");
+  const filtered = jobs.filter(j => {
+    const matchScope = currentScope === "all" || j.scope === currentScope;
+    const q = currentQuery.toLowerCase();
+    const matchQ = !q || j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q);
+    return matchScope && matchQ;
+  });
+
+  if (filtered.length === 0) {
+    wrap.innerHTML = '<p class="empty">No jobs match your search.</p>';
+    return;
+  }
+
+  wrap.innerHTML = filtered.map((j, i) => `
+    <div class="job" onclick="openModal(${jobs.indexOf(j)})">
+      <div class="job-top">
+        <div>
+          <h3>${j.title}</h3>
+          <p class="company">${j.company}</p>
+        </div>
+        <span class="badge">${scopeLabel[j.scope]}</span>
+      </div>
+      ${j.salary ? `<p class="salary">${j.salary}</p>` : ""}
+      ${j.tags ? `<div class="tags">${j.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+function openModal(idx) {
+  const j = jobs[idx];
+  document.getElementById("mTitle").textContent = j.title;
+  document.getElementById("mCompany").textContent = j.company;
+  document.getElementById("mSalary").textContent = j.salary || "";
+  document.getElementById("mDesc").textContent = j.description;
+  document.getElementById("mApply").href = j.apply;
+  document.getElementById("modalBg").classList.add("show");
+}
+
+function closeModal() {
+  document.getElementById("modalBg").classList.remove("show");
+}
+
+document.getElementById("modalBg").addEventListener("click", (e) => {
+  if (e.target.id === "modalBg") closeModal();
+});
+
+document.getElementById("search").addEventListener("input", (e) => {
+  currentQuery = e.target.value;
+  render();
+});
+
+document.querySelectorAll("#scopes button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#scopes button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentScope = btn.dataset.scope;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
